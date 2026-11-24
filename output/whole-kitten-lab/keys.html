@@ -1,0 +1,14 @@
+<body><canvas style="width:540px;height:456px"></canvas><script type="module">
+import {KuroCatEngine} from '/kurocat/@fs/D:/java/kurocat/src/catEngine.ts';
+const c=document.querySelector('canvas'), e=new KuroCatEngine(c,{embedded:true});e.showKeyBubbles=false;
+const wait=ms=>new Promise(resolve=>setTimeout(resolve,ms)); const frames=[];
+async function settle(n){for(let i=0;i<n;i++){await wait(16);e.updatePaw(e.leftPaw,.016,performance.now());e.updatePaw(e.rightPaw,.016,performance.now());e.render();}}
+await wait(800);
+for(const [layout,orientation,vk] of [['65','cat',27],['65','cat',13],['108','viewer',96]]){
+ e.setKeyboardConfig(layout,orientation); await settle(16); e.onKeyDown(vk,false);await settle(14);
+ if(!e.heldKeys.has(vk))throw Error('Key has no paw '+vk);
+ frames.push(c.toDataURL());e.onKeyUp(vk);await settle(26);
+ if([e.leftPaw,e.rightPaw].some(p=>p.mode==='poke'))throw Error('Paw stuck after keyup');
+}
+document.body.textContent=JSON.stringify(frames);
+</script>

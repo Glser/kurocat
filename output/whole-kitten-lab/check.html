@@ -1,0 +1,8 @@
+<body><canvas style="width:540px;height:456px"></canvas><script type="module">
+import {KuroCatEngine} from '/kurocat/@fs/D:/java/kurocat/src/catEngine.ts';
+const c=document.querySelector('canvas'), e=new KuroCatEngine(c,{embedded:true});const wait=ms=>new Promise(r=>setTimeout(r,ms));
+e.setKeyboardConfig('65','cat');e.showKeyBubbles=false;
+await wait(1200);e.render();const frames=[c.toDataURL()];
+for (const action of [()=>e.onKeyDown(65,false),()=>{e.onKeyUp(65);e.onMouseDown('left')}]) { action();for(let i=0;i<10;i++){await wait(18);e.render();}frames.push(c.toDataURL()); }
+document.body.textContent=JSON.stringify(frames);
+</script>
