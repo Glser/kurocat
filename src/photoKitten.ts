@@ -1,5 +1,4 @@
-import shoulderUrl from './assets/cream-kitten/native-mouse-shoulder.webp';
-import gripUrl from './assets/cream-kitten/native-mouse-grip.webp';
+import mousePoseUrl from './assets/cream-kitten/mouse-pose.webp';
 import pawsUrl from './assets/cream-kitten/native-forepaws.webp';
 import restUrl from './assets/cream-kitten/rest.webp';
 import portraitUrl from './assets/cream-kitten/portrait.webp';
@@ -10,7 +9,8 @@ function load(src: string): HTMLImageElement {
   return image;
 }
 export const photoChest = load(restUrl), photoArmed = load(portraitUrl);
-const paws = load(pawsUrl), grip = load(gripUrl), shoulder = load(shoulderUrl);
+export const photoMousePose = load(mousePoseUrl);
+const paws = load(pawsUrl);
 // Landmarks in the 600-unit portrait, measured at the opaque toe contour.
 export const photoToes = { left: { x: 131, y: 564 }, right: { x: 398, y: 568 } };
 
@@ -31,32 +31,6 @@ export function drawReachingPaw(ctx: CanvasRenderingContext2D, side: 'left' | 'r
   }
   ctx.drawImage(paws, x*k, (wrist-top)*k, 300*k, (600-wrist)*k,
     x+dx, wrist+dy, 300, 600-wrist);
-}
-
-// Rotate into the direction of the mouse before extending along the forearm.
-// The old horizontal band shear spread the feathered shoulder across bare desk.
-export function drawMouseGrip(ctx: CanvasRenderingContext2D, dx: number, dy: number): void {
-  if (!grip.naturalWidth) { drawReachingPaw(ctx, 'left', dx, dy); return; }
-  const toe = photoToes.left, rootY = 376, wristY = 494, top = 360;
-  const shoulderY = 398; // pivot below the cheek, inside the chest silhouette
-  const dY = toe.y + dy - shoulderY;
-  const length = Math.hypot(dx, dY), cuff = length - (toe.y-wristY);
-  const sourceX = 30, width = 190, k = grip.naturalWidth / width;
-  ctx.save();
-  ctx.translate(toe.x, shoulderY);
-  ctx.rotate(Math.atan2(-dx, dY));
-  // Extend through a few matching wrist texels. At fractional display scales
-  // a butt joint between two rotated drawImage rectangles can show the desk.
-  const upperH = Math.max(1, cuff+rootY-top), stretch = upperH/(wristY-top);
-  const overlap = Math.min(6, 4/stretch);
-  ctx.drawImage(grip, 0, 0, grip.naturalWidth, (wristY-top+overlap)*k,
-    sourceX-toe.x, top-rootY, width, upperH+overlap*stretch);
-  ctx.drawImage(grip, 0, (wristY-top)*k, grip.naturalWidth, (580-wristY)*k,
-    sourceX-toe.x, cuff, width, 580-wristY);
-  ctx.restore();
-  // Portrait coordinates, not arm coordinates: the shoulder stays with the
-  // chest while the elbow and wrist follow the mouse underneath it.
-  if (shoulder.naturalWidth) ctx.drawImage(shoulder, 30, 290, 220, 210);
 }
 
 // Independent of the cat's generic excitement meter: only fresh typing strokes count.

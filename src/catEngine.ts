@@ -1,5 +1,5 @@
 import { drawPhotoMouse } from './mouseAppearance';
-import { photoChest, photoArmed, photoToes, drawReachingPaw, drawMouseGrip, PhotoKittenAction } from './photoKitten';
+import { photoChest, photoArmed, photoToes, drawReachingPaw, photoMousePose, PhotoKittenAction } from './photoKitten';
 import { keyboardCase, keyRows, frontLegend } from './keyboardFinish';
 import {
   PHOTO_KEYS,
@@ -766,7 +766,6 @@ export class KuroCatEngine {
   private squintAmount = 0;
   private earTwitchLeft = 0;
   private earTwitchRight = 0;
-  private photoMouseGrip = false;
   private readonly photoAction = new PhotoKittenAction();
   private recentKeyTimes: number[] = [];
   private typingEnergy = 0;
@@ -2212,13 +2211,26 @@ export class KuroCatEngine {
       const x = this.catCenterX - size * 0.5 + (head.x - this.catCenterX) * 0.18;
       const height = baseY - head.y;
       const armed = this.photoAction.amount(performance.now()) >= 0.5 && photoArmed.naturalWidth > 0;
-      const body = armed ? photoArmed : photoChest;
-      if (body.naturalWidth) ctx.drawImage(body, x, head.y, size, height);
-      this.drawMiniMouse(ctx);
+      const gripping = !armed && !this.privacyMode && this.leftPaw.mode === 'mouse' && photoMousePose.naturalWidth > 0;
+      let bodyX = x;
+      if (gripping) {
+        // Same rigid photo at every reach distance. Bring the mouse to the fixed
+        // toe, keeping its shell clear of the keyboard on the full-size layout.
+        const toeX = x - size * 67/600;
+        bodyX += Math.min(0, this.kbCenterX - this.kbWidth*0.51 - 17 - toeX);
+        bodyX += this.mouseOffsetX * 0.25;
+        const toeY = head.y + height * 577/600;
+        this.drawMiniMouse(ctx, bodyX - size*67/600, toeY + (this.keyboardOrientation === 'cat' ? 10 : -9));
+        ctx.drawImage(photoMousePose, bodyX - size/3, head.y, size*4/3, height);
+      } else {
+        const body = armed ? photoArmed : photoChest;
+        if (body.naturalWidth) ctx.drawImage(body, x, head.y, size, height);
+        this.drawMiniMouse(ctx);
+      }
       this.drawKeyboard(ctx);
-      if (!armed && body.naturalWidth) {
-        this.drawPhotoContact(ctx, this.leftPaw, x, head.y, size, height);
-        this.drawPhotoContact(ctx, this.rightPaw, x, head.y, size, height);
+      if (!armed && photoChest.naturalWidth) {
+        if (!gripping) this.drawPhotoContact(ctx, this.leftPaw, x, head.y, size, height);
+        this.drawPhotoContact(ctx, this.rightPaw, bodyX, head.y, size, height);
       }
     } else {
       this.drawMiniMouse(ctx);
@@ -3389,9 +3401,8 @@ export class KuroCatEngine {
     }
   }
 
-  private drawMiniMouse(ctx: CanvasRenderingContext2D): void {
-    const mx = this.mouseBaseX + this.mouseOffsetX;
-    const my = this.mouseBaseY + this.mouseOffsetY + this.deskHopY * 1.35;
+  private drawMiniMouse(ctx: CanvasRenderingContext2D, mx = this.mouseBaseX + this.mouseOffsetX,
+    my = this.mouseBaseY + this.mouseOffsetY + this.deskHopY * 1.35): void {
     drawPhotoMouse(ctx, mx, my, this.keyboardOrientation === 'cat', this.mouseLeftPress,
       this.mouseRightPress, Math.max(this.mouseMiddlePress, this.mouseScrollFlash), this.getMouseButtonColors());
   }
@@ -3892,13 +3903,7 @@ export class KuroCatEngine {
     ctx.translate(photoX, photoY);
     ctx.scale(width/600, height/600);
     const dx = (px-photoX)*600/width-toe.x, dy = (py-lift-photoY)*600/height-toe.y;
-    if (paw.side === 'left') {
-      if (this.privacyMode || paw.mode === 'poke') this.photoMouseGrip = false;
-      else if (paw.mode === 'mouse') this.photoMouseGrip = true;
-      else if (reach < 0.03) this.photoMouseGrip = false; // retain the grip through retraction
-    }
-    if (paw.side === 'left' && this.photoMouseGrip) drawMouseGrip(ctx, dx, dy);
-    else drawReachingPaw(ctx, paw.side, dx, dy);
+    drawReachingPaw(ctx, paw.side, dx, dy);
     ctx.restore();
   }
 

@@ -76,13 +76,24 @@ def build():
             # silhouette must not become a streak when the shoulder rotates.
             grip_coat = sample(chest_photo, xx+44, yy)
             grip = fur*alpha + grip_coat*grip_sleeve[...,None]*(1-alpha*fur[...,3:4]/255)
-            # Leave a transparent gutter around the entire paw, including the outer heel.
-            rgba(grip).crop((36,432,264,696)).save(ASSETS/'native-mouse-grip.webp',quality=97,method=6)
-            # Stationary chest fur hides the rotating proximal joint. It is taken
-            # from the same pixels as the body and is not part of the moving limb.
-            r = np.hypot((xx-140)/109, (yy-397)/98)
-            socket = chest*smooth((1-r)/.54)[...,None]
-            rgba(socket).crop((36,348,300,600)).save(ASSETS/'native-mouse-shoulder.webp',quality=98,method=6)
+            # Bake one fixed, foreshortened grip into the chest at source resolution.
+            # The canvas includes 200 portrait units of transparent space to the left.
+            gy,gx = (np.indices((900,1200), dtype=np.float32)+.5)/1.5-.5
+            gx -= 200
+            tx,ty = -67,577  # contact landmark in the original 600-unit body space
+            ax,ay = 94,437
+            length = np.hypot(tx-ax,ty-ay)
+            c,sn = (ty-ay)/length,(ax-tx)/length
+            scale = length/(564-376)
+            u = 131 + (c*(gx-ax)+sn*(gy-ay))/scale
+            v = 376 + (-sn*(gx-ax)+c*(gy-ay))/scale
+            hand = sample(grip,u,v)
+            hand *= ((u>=0)&(u<600)&(v>=0)&(v<600))[...,None]
+            body = sample(chest_photo,gx,gy)*((gx>=0)&(gx<600))[...,None]
+            # Reveal the original stationary chest fur over the proximal joint.
+            socket = smooth((1-np.hypot((gx-ax)/97,(gy-ay)/85))/.55)[...,None]
+            hand *= 1-body[...,3:4]/255*socket
+            rgba(hand + body*(1-hand[...,3:4]/255)).save(ASSETS/'mouse-pose.webp',quality=97,method=6)
     # Keep the real silhouette when the toes cross the keyboard bezel. The
     # torso is already present in rest.webp; no rectangular chest pixels here.
     rgba(forepaws).crop((0, 396, SIZE, SIZE)).save(ASSETS/'native-forepaws.webp',quality=97,method=6)
