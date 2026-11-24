@@ -1,3 +1,5 @@
+import { buildPhotoMouseShell } from './mouseShell3d';
+import { keyboardCase, keyRows, frontLegend } from './keyboardFinish';
 import * as THREE from 'three';
 import {
   getKeyboardLayout,
@@ -175,38 +177,26 @@ interface KeyEntry3D {
 
 const legendTextureCache = new Map<string, THREE.CanvasTexture>();
 
-function makeKeyLegendTexture(label: string, accent: 'base' | 'mod' | 'orange', rotated180: boolean): THREE.CanvasTexture {
-  const key = `${label}|${accent}|${rotated180 ? 1 : 0}`;
+// CylinderGeometry wraps the four bevel faces across U=0..1. Its last quarter
+// faces the viewer after capGeo's quarter-diagonal turn; leave the top unprinted.
+function makeFrontPrint(label: string, rotated: boolean, width: number): THREE.CanvasTexture {
+  const key = `front:${label}:${rotated}:${width}`;
   const cached = legendTextureCache.get(key);
   if (cached) return cached;
-
   const c = document.createElement('canvas');
-  c.width = 128;
-  c.height = 128;
+  c.width = 512;
+  c.height = 64;
   const g = c.getContext('2d')!;
-  g.fillStyle = accent === 'orange' ? '#f59b2e' : accent === 'mod' ? '#e6e4db' : '#f9f8f3';
-  g.fillRect(0, 0, 128, 128);
-
-  // Sculpted concave PBT keycap sheen
-  const grad = g.createLinearGradient(0, 0, 0, 128);
-  grad.addColorStop(0, 'rgba(255,255,255,0.28)');
-  grad.addColorStop(1, 'rgba(0,0,0,0.08)');
-  g.fillStyle = grad;
-  g.fillRect(0, 0, 128, 128);
-
-  if (label) {
-    g.save();
-    g.translate(64, 64);
-    if (rotated180) g.rotate(Math.PI);
-    const fontSize = label.length >= 4 ? 32 : label.length === 3 ? 38 : label.length === 2 ? 46 : 56;
-    g.font = `700 ${fontSize}px "Segoe UI", system-ui, sans-serif`;
-    g.fillStyle = accent === 'orange' ? '#ffffff' : '#2b2d34';
-    g.textAlign = 'center';
-    g.textBaseline = 'middle';
-    g.fillText(label, 0, 2);
-    g.restore();
-  }
-
+  g.fillStyle = '#ffffff';
+  g.fillRect(0, 0, c.width, c.height);
+  g.translate(448, 32);
+  if (rotated) g.rotate(Math.PI);
+  g.scale(1 / width, 1);
+  g.font = 'bold 46px "Segoe UI", sans-serif';
+  g.fillStyle = '#263d4c';
+  g.textAlign = 'center';
+  g.textBaseline = 'middle';
+  g.fillText(label, 0, 0, 110 * width);
   const tex = new THREE.CanvasTexture(c);
   tex.anisotropy = 4;
   tex.colorSpace = THREE.SRGBColorSpace;
@@ -227,29 +217,6 @@ function makeSoftShadowTexture(): THREE.CanvasTexture {
   g.fillRect(0, 0, 256, 256);
   const tex = new THREE.CanvasTexture(c);
   tex.colorSpace = THREE.SRGBColorSpace;
-  return tex;
-}
-
-function makeMouseLabelTexture(char: 'L' | 'R', rotated180: boolean): THREE.CanvasTexture {
-  const key = `mouse:${char}:${rotated180 ? 1 : 0}`;
-  const hit = legendTextureCache.get(key);
-  if (hit) return hit;
-  const c = document.createElement('canvas');
-  c.width = 64;
-  c.height = 64;
-  const g = c.getContext('2d')!;
-  g.save();
-  g.translate(32, 32);
-  if (rotated180) g.rotate(Math.PI);
-  g.font = '800 36px "Segoe UI", system-ui, sans-serif';
-  g.fillStyle = 'rgba(42, 46, 56, 0.56)';
-  g.textAlign = 'center';
-  g.textBaseline = 'middle';
-  g.fillText(char, 0, 2);
-  g.restore();
-  const tex = new THREE.CanvasTexture(c);
-  tex.colorSpace = THREE.SRGBColorSpace;
-  legendTextureCache.set(key, tex);
   return tex;
 }
 
@@ -274,8 +241,8 @@ function makeRoundedSlab(w: number, d: number, h: number, r: number, color: stri
 
 /**
  * KuroCat's iconic clean desktop gear in real 3D:
- * - Slightly canted matte-charcoal mechanical keyboard (NO KeyCat white sticker halo!)
- * - Cordless oval split-plate L/R mini mouse with engraved L/R & dual-color highlight (NO mouse wire!)
+ * - Slightly canted ivory mechanical keyboard (NO KeyCat white sticker halo!)
+ * - Photo-mapped wireless mouse with independent button and wheel highlights.
  */
 export class KeyboardAndMouse3D {
   public readonly boardGroup = new THREE.Group();
@@ -283,9 +250,6 @@ export class KeyboardAndMouse3D {
   public readonly deskGroup = new THREE.Group();
 
   private readonly capGeo: THREE.CylinderGeometry;
-  private readonly sideBaseMat = new THREE.MeshBasicMaterial({ color: '#dad7cd' });
-  private readonly sideModMat = new THREE.MeshBasicMaterial({ color: '#c4c0b4' });
-  private readonly sideOrangeMat = new THREE.MeshBasicMaterial({ color: '#c4741a' });
   private readonly capBottomMat = new THREE.MeshBasicMaterial({ color: '#1b1c20' });
   private readonly shadowTex = makeSoftShadowTexture();
 
@@ -304,8 +268,6 @@ export class KeyboardAndMouse3D {
   private readonly leftBtnMat: THREE.MeshBasicMaterial;
   private readonly rightBtnMat: THREE.MeshBasicMaterial;
   private readonly wheelMat: THREE.MeshBasicMaterial;
-  private readonly mouseLabelLMat: THREE.MeshBasicMaterial;
-  private readonly mouseLabelRMat: THREE.MeshBasicMaterial;
   private readonly mouseHome = new THREE.Vector3(-1.32, 0.015, 1.04);
   private readonly mouseOffset = new THREE.Vector3();
   private readonly mouseTarget = new THREE.Vector3();
@@ -327,156 +289,21 @@ export class KeyboardAndMouse3D {
     this.boardGroup.rotation.set(0.06, -0.042, 0);
     this.deskGroup.add(this.boardGroup);
 
-    // Build Cordless KuroCat Oval Split-Plate Mini Mouse (ZERO cord, ZERO white KeyCat outline!)
+    // Reference mouse uses the same moving group and paw contact target as before.
     this.mouseGroup.position.copy(this.mouseHome);
     this.mouseShape.rotation.y = -0.10;
     this.mouseGroup.add(this.mouseShape);
 
-    const MW = 0.165;
-    const MH = 0.098;
-    const ML = 0.228;
-    const domeGeo = new THREE.SphereGeometry(1, 40, 24, 0, Math.PI * 2, 0, Math.PI / 2);
-    const q = domeGeo.attributes.position;
-    const colors: number[] = [];
-    const topC = new THREE.Color('#f7f7f2');
-    const sideC = new THREE.Color('#cbc8be');
-    const c = new THREE.Color();
-    for (let i = 0; i < q.count; i++) {
-      const x = q.getX(i);
-      const y = q.getY(i);
-      const z = q.getZ(i);
-      q.setXYZ(i, x * (1 - 0.07 * z), y * (1 - 0.12 * z), z);
-      c.copy(sideC).lerp(topC, smoothstep(0.08, 0.76, y));
-      colors.push(c.r, c.g, c.b);
-    }
-    domeGeo.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
-
-    // Soft grounded desk shadow under mouse
-    const mouseShadow = new THREE.Mesh(
-      new THREE.PlaneGeometry(MW * 3.1, ML * 2.8),
-      new THREE.MeshBasicMaterial({ map: this.shadowTex, transparent: true, depthWrite: false, opacity: 0.78 }),
-    );
-    mouseShadow.rotation.x = -Math.PI / 2;
-    mouseShadow.position.set(0, 0.002, 0.012);
-
-    // Subtle dark recessed lower skirt (gives real floating desk height without cartoon white halo)
-    const baseSkirt = new THREE.Mesh(
-      new THREE.CylinderGeometry(MW * 0.96, MW * 0.92, 0.018, 32),
-      new THREE.MeshBasicMaterial({ color: '#b7b5ac' }),
-    );
-    baseSkirt.scale.set(1, 1, ML / MW);
-    baseSkirt.position.y = 0.008;
-
-    this.mouseBodyMat = new THREE.MeshBasicMaterial({ vertexColors: true, color: '#ffffff' });
-    const dome = new THREE.Mesh(domeGeo, this.mouseBodyMat);
-    dome.scale.set(MW, MH, ML);
-    dome.position.y = 0.012;
-
-    const onTop = (x: number, z: number) =>
-      0.012 +
-      MH *
-        (1 - (0.12 * z) / ML) *
-        Math.sqrt(Math.max(0, 1 - (x / (MW * (1 - (0.07 * z) / ML))) ** 2 - (z / ML) ** 2));
-
-    // Crisp horizontal palm-to-button seam + vertical L|R split seam (KuroCat signature mouse look!)
-    const seamMat = new THREE.MeshBasicMaterial({ color: '#8e9099', depthTest: true });
-    const vSeam = new TaperTube3D(14, 4, seamMat, 6);
-    vSeam.update(
-      (t, out) => {
-        const z = mix(-0.01, ML * 0.95, t);
-        out.set(0, onTop(0, z) + 0.003, z);
-      },
-      () => 0.0038,
-    );
-    const hSeam = new TaperTube3D(16, 4, seamMat, 6);
-    hSeam.update(
-      (t, out) => {
-        const x = mix(-MW * 0.94, MW * 0.94, t);
-        const z = -0.01 + 0.012 * Math.cos(Math.PI * (t - 0.5));
-        out.set(x, onTop(x, z) + 0.003, z);
-      },
-      () => 0.0036,
-    );
-
-    this.wheelMat = new THREE.MeshBasicMaterial({ color: '#555966', depthTest: true });
-    const wheel = new THREE.Mesh(new THREE.SphereGeometry(1, 16, 10), this.wheelMat);
-    wheel.scale.set(0.016, 0.013, 0.036);
-    wheel.position.set(0, onTop(0, ML * 0.44) + 0.005, ML * 0.44);
-    wheel.renderOrder = 7;
-
-    // Curved surface-hugging LMB (+X in cat-facing) & RMB (-X in cat-facing) highlight plates
-    const makeBtnPatch = (sideSign: -1 | 1) => {
-      const geo = new THREE.PlaneGeometry(1, 1, 10, 10);
-      const pos = geo.attributes.position;
-      for (let i = 0; i < pos.count; i++) {
-        const u = pos.getX(i) + 0.5; // 0..1 from center to outer edge
-        const v = pos.getY(i) + 0.5; // 0..1 from middle seam to front tip
-        const ang = (1 - v) * (Math.PI * 0.46);
-        const rad = 0.08 + u * 0.85;
-        const x = sideSign * Math.max(0.010, Math.cos(ang) * rad * MW * 0.92);
-        const z = Math.max(0.004, Math.sin(ang) * rad * ML * 0.92);
-        pos.setXYZ(i, x, onTop(x, z) + 0.004, z);
-      }
-      geo.computeVertexNormals();
-      return geo;
-    };
-
-    this.leftBtnMat = new THREE.MeshBasicMaterial({
-      color: '#d4f044',
-      transparent: true,
-      opacity: 0,
-      depthTest: true,
-      depthWrite: false,
-      side: THREE.DoubleSide,
-    });
-    const leftBtn = new THREE.Mesh(makeBtnPatch(1), this.leftBtnMat);
-    leftBtn.renderOrder = 5;
-
-    this.rightBtnMat = new THREE.MeshBasicMaterial({
-      color: '#ff7b3b',
-      transparent: true,
-      opacity: 0,
-      depthTest: true,
-      depthWrite: false,
-      side: THREE.DoubleSide,
-    });
-    const rightBtn = new THREE.Mesh(makeBtnPatch(-1), this.rightBtnMat);
-    rightBtn.renderOrder = 5;
-
-    // Subtle L & R micro-labels on mouse buttons
-    this.mouseLabelLMat = new THREE.MeshBasicMaterial({
-      map: makeMouseLabelTexture('L', true),
-      transparent: true,
-      depthTest: true,
-      depthWrite: false,
-    });
-    this.mouseLabelRMat = new THREE.MeshBasicMaterial({
-      map: makeMouseLabelTexture('R', true),
-      transparent: true,
-      depthTest: true,
-      depthWrite: false,
-    });
-    const lblGeo = new THREE.PlaneGeometry(0.068, 0.068);
-    lblGeo.rotateX(-Math.PI / 2);
-    const lblL = new THREE.Mesh(lblGeo, this.mouseLabelLMat);
-    lblL.position.set(MW * 0.42, onTop(MW * 0.42, ML * 0.48) + 0.009, ML * 0.48);
-    lblL.renderOrder = 8;
-    const lblR = new THREE.Mesh(lblGeo, this.mouseLabelRMat);
-    lblR.position.set(-MW * 0.42, onTop(-MW * 0.42, ML * 0.48) + 0.009, ML * 0.48);
-    lblR.renderOrder = 8;
-
-    this.mouseShape.add(
-      mouseShadow,
-      baseSkirt,
-      dome,
-      leftBtn,
-      rightBtn,
-      vSeam.mesh,
-      hSeam.mesh,
-      wheel,
-      lblL,
-      lblR,
-    );
+    const shell = buildPhotoMouseShell();
+    this.mouseBodyMat = shell.body;
+    this.leftBtnMat = shell.left;
+    this.rightBtnMat = shell.right;
+    this.wheelMat = shell.wheel;
+    const shadow = new THREE.Mesh(new THREE.PlaneGeometry(.48, .67),
+      new THREE.MeshBasicMaterial({ map: this.shadowTex, transparent: true, depthWrite: false, opacity: .72 }));
+    shadow.rotation.x = -Math.PI / 2;
+    shadow.position.set(0, .001, .012);
+    this.mouseShape.add(shadow, shell.group);
     this.deskGroup.add(this.mouseGroup);
 
     scene.add(this.deskGroup);
@@ -512,12 +339,8 @@ export class KeyboardAndMouse3D {
 
     // Sync mouse orientation (180° cat-facing vs 0° viewer-facing)
     this.mouseShape.rotation.y = isCatFacing ? -0.10 : Math.PI - 0.10;
-    this.mouseLabelLMat.map = makeMouseLabelTexture('L', isCatFacing);
-    this.mouseLabelRMat.map = makeMouseLabelTexture('R', isCatFacing);
-    this.mouseLabelLMat.needsUpdate = true;
-    this.mouseLabelRMat.needsUpdate = true;
 
-    const U = is108 ? 0.122 : 0.150;
+    const U = is108 ? 0.122 : 2.25 / layout.totalUnits; // retain the compact desk footprint
     const CAP = U * 0.87;
     const W = layout.totalUnits * U + 0.14;
     const D = layout.totalRows * U + 0.14;
@@ -536,17 +359,11 @@ export class KeyboardAndMouse3D {
     kbShadow.rotation.x = -Math.PI / 2;
     kbShadow.position.set(0, 0.002, 0.025);
 
-    // Sleek matte dark-graphite anodized chassis + subtle upper chamfer edge (ZERO white sticker halo!)
-    const baseChassis = makeRoundedSlab(W, D, this.boardH, 0.068, '#202229', 0);
-    const topBezel = makeRoundedSlab(W - 0.014, D - 0.014, 0.014, 0.060, '#2c2f38', this.boardH - 0.008);
-    const plate = makeRoundedSlab(W - 0.062, D - 0.062, 0.008, 0.044, '#181a20', this.boardH + 0.004);
+    // Ivory chassis with a recessed plate and a shaded lower edge.
+    const baseChassis = makeRoundedSlab(W, D, this.boardH, 0.068, keyboardCase.edge, 0);
+    const topBezel = makeRoundedSlab(W - 0.014, D - 0.014, 0.014, 0.060, keyboardCase.rim, this.boardH - 0.008);
+    const plate = makeRoundedSlab(W - 0.062, D - 0.062, 0.008, 0.044, keyboardCase.bed, this.boardH + 0.004);
     this.boardGroup.add(kbShadow, baseChassis, topBezel, plate);
-
-    const baseColors = {
-      base: new THREE.Color('#ffffff'),
-      mod: new THREE.Color('#ffffff'),
-      orange: new THREE.Color('#ffffff'),
-    };
 
     for (const spec of layout.keys) {
       const rY = spec.rowY ?? spec.row;
@@ -559,13 +376,12 @@ export class KeyboardAndMouse3D {
 
       const x = (screenU - layout.totalUnits * 0.5) * U;
       const z = (screenR - layout.totalRows * 0.5) * U;
-      const accent = spec.accent === 'orange' ? 'orange' : spec.accent === 'mod' ? 'mod' : 'base';
-
-      const legendText = spec.id === 'space' ? '' : spec.id === 'esc' ? 'Esc' : spec.label;
-      const tex = makeKeyLegendTexture(legendText, accent, isCatFacing);
-      const topMat = new THREE.MeshBasicMaterial({ map: tex, color: baseColors[accent].clone() });
-      const sideMat =
-        accent === 'orange' ? this.sideOrangeMat : accent === 'mod' ? this.sideModMat : this.sideBaseMat;
+      const finish = keyRows[spec.row];
+      const baseColor = new THREE.Color(finish.top);
+      const topMat = new THREE.MeshBasicMaterial({ color: baseColor });
+      const sideMat = new THREE.MeshBasicMaterial({
+        color: finish.side, map: makeFrontPrint(frontLegend(spec), isCatFacing, spec.uWidth),
+      });
 
       const cap = new THREE.Mesh(this.capGeo, [sideMat, topMat, this.capBottomMat]);
       cap.scale.set(
@@ -583,7 +399,7 @@ export class KeyboardAndMouse3D {
         spec,
         holder,
         topMat,
-        baseColor: baseColors[accent],
+        baseColor,
         x,
         z,
         down: false,
@@ -715,7 +531,8 @@ export class KeyboardAndMouse3D {
     // Since mouseShape already rotates 180° when switching cat/viewer orientation, L plate is always LMB!
     this.leftBtnMat.opacity = 0.88 * this.leftPress;
     this.rightBtnMat.opacity = 0.88 * this.rightPress;
-    this.wheelMat.color.set('#555966').lerp(this.hitColor, this.wheelGlow);
+    this.wheelMat.color.copy(this.hitColor);
+    this.wheelMat.opacity = .84 * this.wheelGlow;
 
     const anyPress = Math.max(this.leftPress, this.rightPress);
     this.mouseShape.scale.set(1 + 0.03 * anyPress, 1 - 0.10 * anyPress, 1);

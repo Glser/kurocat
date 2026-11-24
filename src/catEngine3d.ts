@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import type { CatSkinConfig } from './catSkins';
-import type { KeyboardLayoutId } from './keyboardLayout';
+import { typingPaw, type KeyboardLayoutId } from './keyboardLayout';
 import type { KeyboardOrientation, TailKeyMode } from './catEngine';
 import { DEFAULT_TAIL_KEY_IDS } from './catEngine';
 import { catAudio } from './audio';
@@ -1670,8 +1670,9 @@ export class KuroCatEngine3D {
       this.pokeAnnoy(0.32);
     }
 
+    const zonePaw = typingPaw(k.spec.id, this.desk.getOrientation() === 'cat');
     const useTail =
-      !this.isCross &&
+      !(zonePaw && this.tailKeyMode === 'smart') && !this.isCross &&
       this.tailKeyMode !== 'off' &&
       (this.tailKeyMode === 'custom'
         ? this.tailKeyIdSet.has(k.spec.id)
@@ -1685,7 +1686,7 @@ export class KuroCatEngine3D {
 
     const mousingNow = this.isMousing();
     const isLeftSideScreen = k.x < 0.05;
-    const pawKey: 'L' | 'R' = mousingNow ? 'R' : isLeftSideScreen ? 'L' : 'R';
+    const pawKey = zonePaw ? (zonePaw === 'left' ? 'L' : 'R') : (!mousingNow && isLeftSideScreen ? 'L' : 'R');
     const paw = this.paws[pawKey];
     paw.from.copy(paw.pos);
     paw.keyId = k.spec.id;
@@ -1880,6 +1881,7 @@ export class KuroCatEngine3D {
     return (
       !this.privacyMode &&
       !this.asleep &&
+      !(this.paws.L.keyId && (this.paws.L.down || this.elapsed - this.paws.L.t0 < this.paws.L.dur)) &&
       (this.leftMouseDown || this.rightMouseDown || this.elapsed - this.lastMouse < 1.35)
     );
   }

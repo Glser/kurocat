@@ -112,7 +112,7 @@ export const KUROCAT_I18N: Record<Locale, KuroCatI18nBundle> = {
       'pg.presetEdgeMods': '外侧功能键',
       'pg.presetClear': '清空',
       'pg.lblSkin': '切换皮肤',
-      'pg.layout65': '65% 紧凑',
+      'pg.layout65': '冰蓝紧凑',
       'pg.layout108': '108 全尺寸',
       'pg.orientCat': '面向猫咪',
       'pg.orientViewer': '面向观众',
@@ -197,7 +197,7 @@ export const KUROCAT_I18N: Record<Locale, KuroCatI18nBundle> = {
       'dl.sub':
         '所有安装包均内置 <strong>20%–150% 无级缩放</strong>、<strong>65% / 108 键随时切换</strong>、<strong>自定义尾巴拍键</strong> 与 <strong>App 内自动更新</strong>。<br />默认提供 <code>qianyi.one</code> 国内高速直链，同时保留 GitHub Releases 官方原链与 SHA-256 校验。',
       'dl.winDesc':
-        '开箱即 65% 紧凑机械键盘，自动创建桌面 <code>KuroCat</code> 图标、开始菜单与系统卸载入口；右键随时可一键切换 <strong>108 键全尺寸小键盘</strong>、<strong>自定义尾巴按键</strong> 与内置自更新。',
+        '开箱即 冰蓝紧凑机械键盘，自动创建桌面 <code>KuroCat</code> 图标、开始菜单与系统卸载入口；右键随时可一键切换 <strong>108 键全尺寸小键盘</strong>、<strong>自定义尾巴按键</strong> 与内置自更新。',
       'dl.macDesc':
         '原生编译 ARM64 + x86_64 通用镜像，兼容 M1/M2/M3/M4 与老款 Intel Mac（macOS 10.15 Catalina 及以上），内置 65% / 108 键、6 款猫咪与大肥鱼皮肤。打开 <code>.dmg</code> 拖入「应用程序」即可运行。',
       'dl.tipWinBody':
@@ -215,7 +215,7 @@ export const KUROCAT_I18N: Record<Locale, KuroCatI18nBundle> = {
       'feat.whaleHeadline': '新皮肤「大肥鱼」登场<br />鲸尾拍键 · 脸红大笑 · 密码捂眼',
       'feat.whaleBody':
         '内置全新 <strong>🐳 大肥鱼（鲸鱼娘）</strong> 桌宠皮肤：支持<strong>左手点鼠标 + 右手敲键盘 + 大鲸尾甩拍自定义按键</strong>三线同时开工；打字手速越快越害羞脸红，飙到高能连打直接笑开花；检测到系统密码输入框时自动<strong>乖巧闭眼、双手捂眼</strong>并隐藏所有键帽与气泡。',
-      'feat.kbHeadline': '65% 紧凑或 108 键全尺寸<br />正反双视角，随手切换',
+      'feat.kbHeadline': '冰蓝紧凑或 108 键全尺寸<br />正反双视角，随手切换',
       'feat.kbBody':
         '无论你习惯极简 65% 小键盘，还是财务/工程必备的 108 键完整小键盘，右键一秒切换并自动锚定右下角平滑调整窗口宽度。支持<strong>「面向猫咪（180° 真实视角）」</strong>与<strong>「面向观众（正向字母易读视角）」</strong>双透视重投影，鼠标左右键也同步自动翻转。',
       'feat.mouseHeadline': '左右键独立分色按压<br />还有无感自升级',
@@ -251,7 +251,7 @@ export const KUROCAT_I18N: Record<Locale, KuroCatI18nBundle> = {
       'mcp.p3': '把 KuroCat 缩放到 85%，切换为 108 键全尺寸键盘和面向观众视角',
     },
     skins: {
-      black: '小黑猫',
+      black: '橘白护目镜猫',
       ragdoll: '布偶猫',
       'orange-tabby': '大橘猫',
       calico: '三花猫',
@@ -283,7 +283,7 @@ export const KUROCAT_I18N: Record<Locale, KuroCatI18nBundle> = {
       latestVersion: (tag) => `最新版本 ${tag}`,
       heroDownloadWin: (size) => `免费下载 Windows 版（${size}）`,
       heroDownloadMac: (size) => `免费下载 macOS 通用版（${size}）`,
-      layout: (id) => (id === '108' ? '108 全尺寸' : '65% 紧凑'),
+      layout: (id) => (id === '108' ? '108 全尺寸' : '冰蓝紧凑'),
       orient: (o) => (o === 'viewer' ? '面向观众' : '面向猫咪'),
       tailPickerBtn: (open, count) =>
         open ? `✓ 正在点选（已选 ${count} 键）` : `🐾 点选尾巴按键（${count}）`,
@@ -339,7 +339,7 @@ export const KUROCAT_I18N: Record<Locale, KuroCatI18nBundle> = {
       'pg.presetEdgeMods': 'Outer Modifiers',
       'pg.presetClear': 'Clear',
       'pg.lblSkin': 'Skin',
-      'pg.layout65': '65% Compact',
+      'pg.layout65': 'Ice Blue Compact',
       'pg.layout108': '108 Full-Size',
       'pg.orientCat': 'Cat View',
       'pg.orientViewer': 'Viewer View',
@@ -442,7 +442,7 @@ export const KUROCAT_I18N: Record<Locale, KuroCatI18nBundle> = {
       'feat.whaleHeadline': 'Meet "BigFish" Whale-Girl<br />Tail Slaps · Speed Blush · Privacy Shield',
       'feat.whaleBody':
         'Our built-in <strong>🐳 BigFish (whale-girl)</strong> skin supports simultaneous <strong>left-hand mouse + right-hand typing + splashing whale-tail key slaps</strong>. Type faster to make her blush and burst into a happy smile; focus any password field and she covers her eyes with both hands while hiding every keycap.',
-      'feat.kbHeadline': '65% Compact or 108 Full-Size<br />Dual Perspectives, Instant Switch',
+      'feat.kbHeadline': 'Ice Blue Compact or 108 Full-Size<br />Dual Perspectives, Instant Switch',
       'feat.kbBody':
         'Switch in one click between minimal 65% and full 108-key ANSI (complete F-row &amp; numpad) with smooth bottom-right anchored resizing. Flip between <strong>Cat-Facing (180°)</strong> and <strong>Viewer-Facing (upright legends)</strong> with synchronized mouse button orientation.',
       'feat.mouseHeadline': 'Independent L / R Click Colors<br />&amp; Seamless In-App Auto-Updater',
@@ -478,7 +478,7 @@ export const KUROCAT_I18N: Record<Locale, KuroCatI18nBundle> = {
       'mcp.p3': 'Scale KuroCat to 85% and switch to the 108-key full-size viewer-facing keyboard',
     },
     skins: {
-      black: 'Black Cat',
+      black: 'Goggle Kitten',
       ragdoll: 'Ragdoll',
       'orange-tabby': 'Orange Tabby',
       calico: 'Calico',
@@ -510,7 +510,7 @@ export const KUROCAT_I18N: Record<Locale, KuroCatI18nBundle> = {
       latestVersion: (tag) => `Latest ${tag}`,
       heroDownloadWin: (size) => `Download for Windows (${size})`,
       heroDownloadMac: (size) => `Download for macOS (${size})`,
-      layout: (id) => (id === '108' ? '108 Full-Size' : '65% Compact'),
+      layout: (id) => (id === '108' ? '108 Full-Size' : 'Ice Blue Compact'),
       orient: (o) => (o === 'viewer' ? 'Viewer View' : 'Cat View'),
       tailPickerBtn: (open, count) =>
         open ? `✓ Picking (${count} selected)` : `🐾 Pick Tail Keys (${count})`,
@@ -566,7 +566,7 @@ export const KUROCAT_I18N: Record<Locale, KuroCatI18nBundle> = {
       'pg.presetEdgeMods': '外側修飾キー',
       'pg.presetClear': 'クリア',
       'pg.lblSkin': 'スキン',
-      'pg.layout65': '65% コンパクト',
+      'pg.layout65': 'アイスブルー・コンパクト',
       'pg.layout108': '108 フルサイズ',
       'pg.orientCat': '猫目線',
       'pg.orientViewer': '視聴者目線',
@@ -651,7 +651,7 @@ export const KUROCAT_I18N: Record<Locale, KuroCatI18nBundle> = {
       'dl.sub':
         '全パッケージに <strong>20%–150% 無段階ズーム</strong>・<strong>65% / 108 キー切替</strong>・<strong>しっぽキー選択</strong>・<strong>アプリ内自動更新</strong> を内蔵。<br /><code>qianyi.one</code> 高速ミラーと GitHub Releases 公式リンク（SHA-256 検証対応）を用意しています。',
       'dl.winDesc':
-        '初期配列は 65% コンパクト。デスクトップアイコンやアンインストーラーを自動作成し、右クリックから <strong>108 フルサイズ</strong>・<strong>しっぽキー指定</strong>・OBS 透過ソース・自動更新へいつでも切替できます。',
+        '初期配列は アイスブルー・コンパクト。デスクトップアイコンやアンインストーラーを自動作成し、右クリックから <strong>108 フルサイズ</strong>・<strong>しっぽキー指定</strong>・OBS 透過ソース・自動更新へいつでも切替できます。',
       'dl.macDesc':
         'Apple Silicon (M1–M4) と Intel Mac（macOS 10.15 Catalina 以降）両対応の Universal DMG。65%/108 キーと全 7 スキンを内蔵。<code>.dmg</code> を開いて「アプリケーション」へドラッグするだけです。',
       'dl.tipWinBody':
@@ -669,7 +669,7 @@ export const KUROCAT_I18N: Record<Locale, KuroCatI18nBundle> = {
       'feat.whaleHeadline': '新スキン「クジラ娘」登場<br />クジラ尾打鍵・照れ笑顔・パスワード目隠し',
       'feat.whaleBody':
         '標準搭載の <strong>🐳 クジラ娘（大肥鱼 / BigFish）</strong> は <strong>左手マウス + 右手タイピング + 水しぶき付きクジラ尾打鍵</strong> の 3 系統同時動作に対応。高速タイピングで頬が染まり満面の笑顔に、パスワード入力時は両手で目を覆って入力を隠します。',
-      'feat.kbHeadline': '65% コンパクト / 108 フルサイズ<br />2 視点をワンクリック切替',
+      'feat.kbHeadline': 'アイスブルー・コンパクト / 108 フルサイズ<br />2 視点をワンクリック切替',
       'feat.kbBody':
         '省スペースな 65% もテンキー完備の 108 キーも右クリック 1 秒で切替でき、右下基準でウィンドウ幅を自動調整。<strong>猫目線（180°）</strong> と <strong>視聴者目線（正立印字）</strong> に合わせてマウス左右ボタンも自動反転します。',
       'feat.mouseHeadline': '左右クリックを別カラーで発光<br />アプリ内ワンクリック自動更新',
@@ -705,7 +705,7 @@ export const KUROCAT_I18N: Record<Locale, KuroCatI18nBundle> = {
       'mcp.p3': 'KuroCat を 85% に縮小して、108 キー・視聴者目線に切り替えて',
     },
     skins: {
-      black: '黒猫',
+      black: 'ゴーグルの茶白猫',
       ragdoll: 'ラグドール',
       'orange-tabby': '茶トラ',
       calico: '三毛猫',
@@ -737,7 +737,7 @@ export const KUROCAT_I18N: Record<Locale, KuroCatI18nBundle> = {
       latestVersion: (tag) => `最新版 ${tag}`,
       heroDownloadWin: (size) => `Windows 版を無料ダウンロード（${size}）`,
       heroDownloadMac: (size) => `macOS 版を無料ダウンロード（${size}）`,
-      layout: (id) => (id === '108' ? '108 フルサイズ' : '65% コンパクト'),
+      layout: (id) => (id === '108' ? '108 フルサイズ' : 'アイスブルー・コンパクト'),
       orient: (o) => (o === 'viewer' ? '視聴者目線' : '猫目線'),
       tailPickerBtn: (open, count) =>
         open ? `✓ 選択中（${count} キー）` : `🐾 しっぽキー選択（${count}）`,

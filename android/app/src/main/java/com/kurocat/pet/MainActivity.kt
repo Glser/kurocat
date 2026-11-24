@@ -192,7 +192,7 @@ class MainActivity : AppCompatActivity(), KuroPetListener {
             }
         }
         val loadingLabel = TextView(this).apply {
-            text = "🐈‍⬛ 正在唤醒小黑猫..."
+            text = "🥽 正在唤醒橘白护目镜猫..."
             setTextColor(0xFF8F9DB5.toInt())
             textSize = 13.5f
             gravity = Gravity.CENTER
@@ -353,7 +353,7 @@ class MainActivity : AppCompatActivity(), KuroPetListener {
                 ViewGroup.LayoutParams.WRAP_CONTENT
             )
         }
-        btnLayout65 = makeSegButton("65% 紧凑") {
+        btnLayout65 = makeSegButton("冰蓝紧凑") {
             KuroPrefs.setLayout(this, "65")
             KuroEventBus.postSettingsChanged()
             refreshAllUi()

@@ -1,31 +1,7 @@
-import type { CatSkinConfig } from '../../src/catSkins';
+import { CREAM_KITTEN, type CatSkinConfig } from '../../src/catSkins';
 
 export const BUILTIN_WEB_CATS: CatSkinConfig[] = [
-  {
-    id: 'black',
-    name: '小黑猫',
-    emoji: '🐈‍⬛',
-    builtin: true,
-    furColor: '#141314',
-    legLineColor: 'rgba(210, 212, 216, 0.64)',
-    pattern: 'solid',
-    earOuterColor: '#141314',
-    tailColor: '#141314',
-    tailFluffy: false,
-    tailStripes: false,
-    eyeColorTop: '#d4f044',
-    eyeColorBottom: '#d4f044',
-    pupilColor: '#0e0e10',
-    eyeCatchlight: false,
-    squintColor: '#d4f044',
-    whiskerColor: 'rgba(205, 208, 214, 0.54)',
-    armColor: '#141314',
-    pawColor: '#141314',
-    armCreaseColor: 'rgba(216, 218, 222, 0.64)',
-    accentColor: '#d2f244',
-    accentSideColor: '#8cb014',
-    spots: [],
-  },
+  CREAM_KITTEN,
   {
     id: 'ragdoll',
     name: '布偶猫',

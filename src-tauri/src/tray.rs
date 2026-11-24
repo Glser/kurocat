@@ -166,7 +166,7 @@ pub fn setup_tray(app: &AppHandle, initial: &AppSettings) -> tauri::Result<()> {
         &[&scale_25, &scale_50, &scale_75, &scale_100, &scale_125, &scale_150],
     )?;
 
-    let kb_65 = MenuItem::with_id(app, "kb_65", "65% 紧凑键盘", true, None::<&str>)?;
+    let kb_65 = MenuItem::with_id(app, "kb_65", "冰蓝紧凑键盘", true, None::<&str>)?;
     let kb_108 = MenuItem::with_id(app, "kb_108", "108 键全尺寸（含小键盘）", true, None::<&str>)?;
     let kb_sep = PredefinedMenuItem::separator(app)?;
     let kb_cat = MenuItem::with_id(app, "kb_cat", "面向猫咪（180° 真实视角）", true, None::<&str>)?;

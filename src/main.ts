@@ -10,7 +10,7 @@ import {
   type TailKeyMode,
 } from './catEngine';
 import { catAudio } from './audio';
-import { DEFAULT_BUILTIN_CATS, type CatSkinConfig } from './catSkins';
+import { usesImageRenderer, DEFAULT_BUILTIN_CATS, type CatSkinConfig } from './catSkins';
 import { resolveKeyByVk, type KeyboardLayoutId } from './keyboardLayout';
 import type { CollarColorId, KuroCatEngine3D } from './catEngine3d';
 
@@ -149,7 +149,7 @@ let privacyActive = false;
 let gameActive = false;
 
 function shouldWearHeadphonesNow(): boolean {
-  if (settings.catBreed === 'dafeiyu') return false;
+  if (usesImageRenderer(settings.catBreed)) return false;
   const hm: HeadphoneMode =
     settings.headphoneMode === 'auto' || settings.headphoneMode === 'on'
       ? settings.headphoneMode
@@ -162,7 +162,7 @@ function shouldWearHeadphonesNow(): boolean {
 function wants3DNow(): boolean {
   return (
     settings.renderMode !== '2d' &&
-    settings.catBreed !== 'dafeiyu' &&
+    !usesImageRenderer(settings.catBreed) &&
     !tailPickerOpen &&
     !isWin7Ulw &&
     !webgl3dUnavailable
@@ -337,14 +337,16 @@ function syncMenuUI(): void {
       ? settings.collarColor
       : 'none';
   document.querySelectorAll<HTMLButtonElement>('[data-rendermode]').forEach((btn) => {
-    btn.classList.toggle('active', btn.dataset.rendermode === renderMode);
+    const imageOnly = usesImageRenderer(settings.catBreed);
+    btn.disabled = imageOnly && btn.dataset.rendermode === '3d';
+    btn.classList.toggle('active', btn.dataset.rendermode === (imageOnly ? '2d' : renderMode));
   });
   document.querySelectorAll<HTMLButtonElement>('[data-collar]').forEach((btn) => {
     btn.classList.toggle('active', btn.dataset.collar === collarColor);
   });
   const collarRowEl = document.getElementById('collar-row');
   if (collarRowEl) {
-    collarRowEl.classList.toggle('hidden', renderMode === '2d' || settings.catBreed === 'dafeiyu');
+    collarRowEl.classList.toggle('hidden', renderMode === '2d' || usesImageRenderer(settings.catBreed));
   }
 
   const headphoneMode: HeadphoneMode =
@@ -356,7 +358,7 @@ function syncMenuUI(): void {
   });
   const headphoneRowEl = document.getElementById('headphone-row');
   if (headphoneRowEl) {
-    headphoneRowEl.classList.toggle('hidden', settings.catBreed === 'dafeiyu');
+    headphoneRowEl.classList.toggle('hidden', usesImageRenderer(settings.catBreed));
   }
 
   const headerEl = document.getElementById('menu-header');

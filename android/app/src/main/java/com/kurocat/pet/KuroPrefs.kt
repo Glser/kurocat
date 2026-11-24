@@ -14,7 +14,7 @@ object KuroPrefs {
     private const val PREF_NAME = "kurocat_prefs"
 
     val SKINS = listOf(
-        KuroSkinOption("black", "🐈‍⬛", "小黑猫", 0xFFC8F538.toInt()),
+        KuroSkinOption("black", "🥽", "橘白护目镜猫", 0xFFC8F538.toInt()),
         KuroSkinOption("ragdoll", "🐱", "布偶猫", 0xFF7AC7FF.toInt()),
         KuroSkinOption("orange-tabby", "🍊", "大橘猫", 0xFFFFAE42.toInt()),
         KuroSkinOption("calico", "🌸", "三花猫", 0xFFFF88B5.toInt()),

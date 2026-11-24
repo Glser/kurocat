@@ -1,3 +1,5 @@
+import kittenPreset from './creamKitten.json';
+
 export interface CatSpot {
   part: 'head' | 'body' | 'leftArm' | 'rightArm';
   x: number;
@@ -186,17 +188,15 @@ export function resolveCustomSkin(raw: CatSkinConfig): ResolvedSkin {
   };
 }
 
+// Preserve the original default ID so saved selections and OBS URLs still work.
+export const CREAM_KITTEN: CatSkinConfig = { ...kittenPreset, pattern: 'bicolor' };
+
+export function usesImageRenderer(id?: string): boolean {
+  return id === CREAM_KITTEN.id || id === 'dafeiyu';
+}
+
 export const DEFAULT_BUILTIN_CATS: CatSkinConfig[] = [
-  {
-    id: 'black',
-    name: '小黑猫',
-    emoji: '🐈‍⬛',
-    builtin: true,
-    furColor: '#141314',
-    eyeColorTop: '#d4f044',
-    accentColor: '#d2f244',
-    accentSideColor: '#8cb014',
-  },
+  CREAM_KITTEN,
   {
     id: 'ragdoll',
     name: '布偶猫',
