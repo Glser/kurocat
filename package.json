@@ -6,6 +6,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "dev:playground": "vite --config vite.web.config.ts --port 1421",
     "build": "tsc && vite build",
     "build:web": "vite build --config vite.web.config.ts",
     "build:android-web": "vite build --config vite.android.config.ts",
@@ -23,5 +24,8 @@
     "@types/three": "^0.187.0",
     "typescript": "^5.7.2",
     "vite": "^6.0.7"
+  },
+  "allowScripts": {
+    "esbuild@0.25.12": true
   }
 }

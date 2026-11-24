@@ -1,36 +1,91 @@
-import mousePoseUrl from './assets/cream-kitten/mouse-pose.webp';
-import pawsUrl from './assets/cream-kitten/native-forepaws.webp';
-import restUrl from './assets/cream-kitten/rest.webp';
-import portraitUrl from './assets/cream-kitten/portrait.webp';
+import leftLegUrl from './assets/cream-kitten/key-leg-left.webp';
+import rightLegUrl from './assets/cream-kitten/key-leg-right.webp';
+import restUrl from './assets/cream-kitten/reference-head-rest.webp';
+import burstUrl from './assets/cream-kitten/reference-head-burst.webp';
 
 function load(src: string): HTMLImageElement {
   const image = new Image();
   image.src = src;
   return image;
 }
-export const photoChest = load(restUrl), photoArmed = load(portraitUrl);
-export const photoMousePose = load(mousePoseUrl);
-const paws = load(pawsUrl);
-// Landmarks in the 600-unit portrait, measured at the opaque toe contour.
-export const photoToes = { left: { x: 131, y: 564 }, right: { x: 398, y: 568 } };
+export const photoRest = load(restUrl), photoBurst = load(burstUrl);
+const legs = { left: load(leftLegUrl), right: load(rightLegUrl) };
 
-/** The same native fur as the portrait; only the shoulder-to-wrist span deforms.
- * Coordinates are in portrait space. The last band moves rigidly to the contact point. */
-export function drawReachingPaw(ctx: CanvasRenderingContext2D, side: 'left' | 'right', dx: number, dy: number): void {
-  if (!paws.naturalWidth) return;
-  const x = side === 'left' ? 0 : 300, k = paws.naturalWidth / 600;
-  const top = 330, wrist = 494, bands = 8;
-  const move = (t: number) => t*t*(3-2*t);
-  for (let i = 0; i < bands; i++) {
-    const a = i/bands, b = (i+1)/bands, m0 = move(a), m1 = move(b);
-    const h = (wrist-top)/bands, y = top+i*h, shift = m1-m0;
-    ctx.save();
-    ctx.transform(1, 0, dx*shift/h, 1+dy*shift/h, x+dx*m0, y+dy*m0);
-    ctx.drawImage(paws, x*k, (y-top)*k, 300*k, h*k, 0, 0, 300, h+0.35);
-    ctx.restore();
+// Plates share the same right edge and 600-unit body. The grip has extra left bleed.
+export function drawPhotoBody(ctx: CanvasRenderingContext2D, pose: HTMLImageElement,
+  x: number, y: number, width: number, height: number): void {
+  if (!pose.naturalWidth) return;
+  const plateWidth = width * pose.naturalWidth / pose.naturalHeight;
+  ctx.drawImage(pose, x + width - plateWidth, y, plateWidth, height);
+}
+// Relaxed toes turn in slightly from the elbows, in 600-unit portrait space.
+export const photoToes = { left: { x: 112, y: 568 }, right: { x: 379, y: 568 } };
+export const photoMouseToe = { x: -77, y: 579 };
+
+// Feather the proximal fur into the chest while the outer shoulder silhouette
+// comes from the intact photograph drawn behind the body.
+const frontLegs = new WeakMap<HTMLImageElement, HTMLCanvasElement>();
+function foregroundLeg(keyLeg: HTMLImageElement): HTMLCanvasElement {
+  const cached = frontLegs.get(keyLeg);
+  if (cached) return cached;
+  const canvas = document.createElement('canvas');
+  canvas.width = keyLeg.naturalWidth;
+  canvas.height = keyLeg.naturalHeight;
+  const ctx = canvas.getContext('2d')!;
+  ctx.drawImage(keyLeg, 0, 0);
+  const mask = ctx.createLinearGradient(0, canvas.height * 0.10, 0, canvas.height * 0.26);
+  mask.addColorStop(0, 'transparent');
+  mask.addColorStop(1, 'black');
+  ctx.globalCompositeOperation = 'destination-in';
+  ctx.fillStyle = mask;
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  // Ease the chest-facing edge into the breast fur above the wrist. The
+  // anatomical left/right mirror is applied later by drawReachingPaw.
+  const unit = canvas.height / 270;
+  const overlap = ctx.createLinearGradient(108*unit, 0, 165*unit, 0);
+  overlap.addColorStop(0, 'black');
+  overlap.addColorStop(1, 'transparent');
+  const edgeMask = document.createElement('canvas');
+  edgeMask.width = canvas.width;
+  edgeMask.height = canvas.height;
+  const edge = edgeMask.getContext('2d')!;
+  edge.fillStyle = overlap;
+  edge.fillRect(0, 0, canvas.width, canvas.height);
+  const wrist = edge.createLinearGradient(0, 90*unit, 0, 156*unit);
+  wrist.addColorStop(0, 'transparent');
+  wrist.addColorStop(1, 'black');
+  edge.fillStyle = wrist;
+  edge.fillRect(0, 0, canvas.width, canvas.height);
+  ctx.drawImage(edgeMask, 0, 0);
+  frontLegs.set(keyLeg, canvas);
+  return canvas;
+}
+
+export function drawReachingPaw(ctx: CanvasRenderingContext2D, side: 'left' | 'right',
+  toeX: number, toeY: number, layer: 'shoulder' | 'forearm'): void {
+  const keyLeg = legs[side];
+  if (!keyLeg.naturalWidth) return;
+  const left = side === 'left';
+  // At the marked inner edges of the flanks, in portrait coordinates.
+  const shoulderX = left ? 109 : 448;
+  const shoulderY = left ? 363 : 441;
+  const vx = toeX - shoulderX, vy = toeY - shoulderY;
+  const scale = 0.78, wrist = 155, toe = 245;
+  const wristDistance = Math.max(1, Math.hypot(vx, vy) - (toe-wrist)*scale);
+  const k = keyLeg.naturalHeight / 270;
+  const width = keyLeg.naturalWidth / k, leftEdge = -(82 + 24)*scale;
+  const fur = layer === 'shoulder' ? keyLeg : foregroundLeg(keyLeg);
+  ctx.save();
+  ctx.translate(shoulderX, shoulderY);
+  ctx.rotate(Math.atan2(-vx, vy));
+  if (!left) ctx.scale(-1, 1);
+  ctx.drawImage(fur, 0, 0, keyLeg.naturalWidth, wrist*k,
+    leftEdge, -24, width*scale, wristDistance+24.4);
+  if (layer === 'forearm') {
+    ctx.drawImage(fur, 0, wrist*k, keyLeg.naturalWidth, (270-wrist)*k,
+      leftEdge, wristDistance, width*scale, (270-wrist)*scale);
   }
-  ctx.drawImage(paws, x*k, (wrist-top)*k, 300*k, (600-wrist)*k,
-    x+dx, wrist+dy, 300, 600-wrist);
+  ctx.restore();
 }
 
 // Independent of the cat's generic excitement meter: only fresh typing strokes count.

@@ -1,0 +1,8 @@
+<body><canvas style="width:540px;height:456px"></canvas><script type="module">
+import {KuroCatEngine} from '/src/catEngine.ts';
+const c=document.querySelector('canvas'), e=new KuroCatEngine(c,{embedded:true});e.showKeyBubbles=false;
+const frames=[];await new Promise(r=>setTimeout(r,1200));
+for(const layout of ['108','65']){e.setKeyboardConfig(layout,'cat');for(const pose of ['mouse','idle','poke']){e.leftPaw.mode=pose;e.leftPaw.idleWeight=pose==='poke'?0:1;e.leftPaw.curlWeight=0;e.leftPaw.pos={x:e.kbCenterX-12,y:e.kbCenterY+4};e.render();frames.push(c.toDataURL());}}
+document.body.textContent=JSON.stringify(frames);
+</script>
+
