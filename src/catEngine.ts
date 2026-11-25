@@ -370,6 +370,12 @@ export class KuroCatEngine {
     this.squashSpring.kick(0.9);
   }
 
+  private desktopPhotoViewport: [number, number, number] | null = null;
+  setDesktopPhotoViewport(viewport: [number, number, number] | null): void {
+    this.desktopPhotoViewport = viewport;
+    this.resize();
+  }
+
   private getViewportTransform(): { offsetX: number; offsetY: number; uniformScale: number } {
     const cw = this.canvas.width;
     const ch = this.canvas.height;
@@ -388,6 +394,12 @@ export class KuroCatEngine {
     }
     const cssW = Math.max(1, window.innerWidth);
     const dpr = cw / cssW;
+    if (this.desktopPhotoViewport && this.customSkin?.id === CREAM_KITTEN.id) {
+      const [left, compactRight, fullRight] = this.desktopPhotoViewport;
+      const right = this.keyboardLayout === '108' ? fullRight : compactRight;
+      const uniformScale = Math.min(cw / (left + right), ch / this.logicalH, this.renderScale * dpr);
+      return { offsetX: cw - right * uniformScale, offsetY: ch - this.logicalH * uniformScale, uniformScale };
+    }
     const fitScale = Math.min(cw / this.logicalW, ch / this.logicalH);
     const uniformScale = Math.min(fitScale, this.renderScale * dpr);
     const drawW = this.logicalW * uniformScale;

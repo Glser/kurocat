@@ -60,6 +60,17 @@ fn photo_left_margin(breed: &str) -> f64 {
     0.0
 }
 
+// Last visible scene column, including a safety margin for maximum shoulder lean.
+// Keep the logical cat/keyboard coordinates intact; omit only transparent columns.
+const PHOTO_RIGHT: [f64; 2] = [302.0, 400.0];
+fn photo_right(layout: &str) -> f64 { PHOTO_RIGHT[usize::from(layout == "108")] }
+
+#[tauri::command]
+fn desktop_photo_viewport() -> Option<[f64; 3]> {
+    let left = photo_left_margin("black");
+    (left > 0.0).then_some([left, PHOTO_RIGHT[0], PHOTO_RIGHT[1]])
+}
+
 pub fn window_dimensions(layout: &str, scale: f64, breed: &str) -> (f64, f64) {
     let (bw, bh) = base_dimensions(layout);
     let s = scale.clamp(0.20, 1.50);
@@ -72,7 +83,7 @@ pub fn window_dimensions(layout: &str, scale: f64, breed: &str) -> (f64, f64) {
     #[cfg(not(windows))]
     let (min_w, min_h) = (MIN_WINDOW_WIDTH, MIN_WINDOW_HEIGHT);
     (
-        ((bw + photo_left_margin(breed)) * s).round().max(min_w),
+        ((if photo_left_margin(breed) > 0.0 { photo_right(layout) + photo_left_margin(breed) } else { bw }) * s).round().max(min_w),
         (bh * s).round().max(min_h),
     )
 }
@@ -137,7 +148,7 @@ fn resize_window_anchored_bottom_right(
             .windows_display_id
             .clone();
         if let Some(id) = preferred.as_deref() {
-            return windows_display::resize_pinned(win, id, new_w, new_h);
+            return windows_display::resize_pinned(win, id, new_w, new_h, photo_left_margin(breed) > 0.0);
         }
     }
     let sf = win.scale_factor().unwrap_or(1.0);
@@ -1571,6 +1582,26 @@ fn is_over_interactive_silhouette(rx: f64, ry: f64, is_108: bool) -> (bool, bool
     (over_cat || over_desk, over_cat)
 }
 
+// Face, ears and chest in the 912x684 resting portrait. The former oval was
+// centred on the generic cat and made much of this cat's face click through.
+fn photo_hit(x: f64, y: f64, full: bool) -> (bool, bool) {
+    let (cx, cy, width, height, cat_top, tilt, layout_shift, units): (f64,f64,f64,f64,f64,f64,f64,f64) =
+        if full { (290.,356.,398.,96.,66.,2.4,24.,22.7) } else { (214.,353.,266.,74.,82.,3.4,16.,19.35) };
+    let span = cy - height * 0.34 - cat_top;
+    let anchor = cx - layout_shift - span * 0.13;
+    let z = span / 650.;
+    let px = (x - (anchor - width * 0.075)) / z + 456.;
+    let py = (y - (cy-height/2.+13.-width*0.075*tilt.to_radians().tan())) / z + 650.;
+    let oval = |cx:f64,cy:f64,rx:f64,ry:f64| ((px-cx)/rx).powi(2)+((py-cy)/ry).powi(2) <= 1.;
+    let cat = oval(490.,245.,312.,238.) || oval(446.,510.,259.,183.) ||
+        oval(351.,66.,46.,75.) || oval(701.,107.,60.,80.);
+    let kb = anchor - 3.*(width-14.)/units;
+    let mouse = kb - width*0.51 - 31.;
+    let desk = (x-kb).abs() <= width*0.53 && (y-cy).abs() <= height*0.62 ||
+        (x-mouse).abs() <= 29. && (y-(cat_top+span*579./600.)).abs() <= 44.;
+    (cat || desk,cat)
+}
+
 fn start_hit_test_loop(
     app: AppHandle,
     settings: Arc<Mutex<AppSettings>>,
@@ -1753,16 +1784,19 @@ fn start_hit_test_loop(
             let pet_y0 = 1.0 - pet_h_frac;
             let pet_rx = (rx - pet_x0) / pet_w_frac;
             let pet_ry = (ry - pet_y0) / pet_h_frac;
-            let inside_pet = pet_rx >= 0.0 && pet_rx <= 1.0 && pet_ry >= 0.0 && pet_ry <= 1.0;
-
-            let (mut over_interactive, raw_over_cat) = if inside_pet {
-                is_over_interactive_silhouette(pet_rx, pet_ry, is_108)
+            let (pet_rx, pet_ry, inside_pet, over_interactive, raw_over_cat) = if photo_desk {
+                // Invert the photo viewport used by the canvas, including min-size windows.
+                let right = photo_right(&layout_str);
+                let z = cur_scale.min(win_log_w / (right + photo_left_margin("black"))).min(win_log_h / bh);
+                let x = right + (rx - 1.0) * win_log_w / z;
+                let y = bh + (ry - 1.0) * win_log_h / z;
+                let (interactive, cat) = photo_hit(x, y, is_108);
+                (x / bw, y / bh, inside, inside && interactive, inside && cat)
             } else {
-                (false, false)
+                let inside_pet = (0.0..=1.0).contains(&pet_rx) && (0.0..=1.0).contains(&pet_ry);
+                let (interactive, cat) = is_over_interactive_silhouette(pet_rx, pet_ry, is_108);
+                (pet_rx, pet_ry, inside_pet, inside_pet && interactive, inside_pet && cat)
             };
-            // The mouse and leftmost keys can occupy the new left gutter.
-            if photo_desk && inside && pet_rx < 0.08 && pet_rx >= -0.16
-                && (0.65..=0.91).contains(&pet_ry) { over_interactive = true; }
             // While click-through is locked (and Alt is not held), suppress petting hover so users
             // aren't misled by squinting eyes when the cat is intentionally click-through.
             let over_cat = if effective_locked { false } else { raw_over_cat };
@@ -2346,6 +2380,7 @@ pub fn run() {
             start_pet_drag,
             set_update_banner_open,
             is_win7_ulw_mode,
+            desktop_photo_viewport,
             win7_present_frame,
             win7_sync_overlay,
             save_window_pos,

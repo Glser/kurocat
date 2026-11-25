@@ -97,13 +97,13 @@ fn target_display<'a>(displays: &'a [Display], preferred: Option<&str>) -> Optio
         .or_else(|| displays.first())
 }
 
-fn bottom_right(display: &Display, width: f64, height: f64) -> Placement {
+fn bottom_right(display: &Display, width: f64, height: f64, photo: bool) -> Placement {
     let scale = display.scale_factor;
     let size = PhysicalSize::new(
         (width * scale).round() as u32,
         (height * scale).round() as u32,
     );
-    let right_padding = (28.0 * scale).round() as u32;
+    let right_padding = ((if photo { 6.0 } else { 28.0 }) * scale).round() as u32;
     let bottom_padding = (16.0 * scale).round() as u32;
     let x = display.origin.x
         + display
@@ -131,6 +131,7 @@ fn placement(
         target_display(displays, preferred)?,
         width,
         height,
+        crate::photo_left_margin(&settings.cat_breed) > 0.0,
     ))
 }
 
@@ -161,9 +162,10 @@ pub fn resize_pinned(
     preferred: &str,
     width: f64,
     height: f64,
+    photo: bool,
 ) -> Option<(i32, i32)> {
     let displays = connected_displays(window);
-    let target = bottom_right(target_display(&displays, Some(preferred))?, width, height);
+    let target = bottom_right(target_display(&displays, Some(preferred))?, width, height, photo);
     apply(window, target).ok()?;
     Some((target.position.x, target.position.y))
 }
@@ -381,7 +383,7 @@ mod tests {
 
     #[test]
     fn uses_target_dpi_and_work_area_on_a_display_left_of_primary() {
-        let placement = bottom_right(&display("external", -1920, false, 1.5), 420.0, 440.0);
+        let placement = bottom_right(&display("external", -1920, false, 1.5), 420.0, 440.0, false);
         assert_eq!(placement.size, PhysicalSize::new(630, 660));
         assert_eq!(placement.position, PhysicalPosition::new(-672, 256));
     }

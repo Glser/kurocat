@@ -674,6 +674,7 @@ async function triggerManualUpdateCheck(): Promise<void> {
 }
 
 async function bootstrap(): Promise<void> {
+  engine.setDesktopPhotoViewport(await invoke<[number, number, number] | null>('desktop_photo_viewport').catch(() => null));
   engine.start();
 
   // Hide Windows-only desktop shortcut button on macOS
