@@ -2,6 +2,7 @@ name: Build Cross-Platform Release
 
 on:
   push:
+    branches: [build/win10-photo-kitten]
     tags:
       - 'v*'
   workflow_dispatch:
@@ -76,7 +77,7 @@ jobs:
             KuroCat-*-x64-setup.exe
 
   build-macos:
-    if: ${{ !(github.event_name == 'workflow_dispatch' && inputs.linux_only) }}
+    if: ${{ github.ref != 'refs/heads/build/win10-photo-kitten' && !(github.event_name == 'workflow_dispatch' && inputs.linux_only) }}
     runs-on: macos-latest
     steps:
       - name: Checkout repository
@@ -146,7 +147,7 @@ jobs:
             KuroCat-*-macos-universal.app.tar.gz
 
   build-linux:
-    if: ${{ !(github.event_name == 'workflow_dispatch' && inputs.macos_only) }}
+    if: ${{ github.ref != 'refs/heads/build/win10-photo-kitten' && !(github.event_name == 'workflow_dispatch' && inputs.macos_only) }}
     strategy:
       fail-fast: false
       matrix:
