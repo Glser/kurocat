@@ -126,7 +126,7 @@ fn placement(
     preferred: Option<&str>,
     settings: &AppSettings,
 ) -> Option<Placement> {
-    let (width, height) = window_dimensions(&settings.keyboard_layout, settings.scale);
+    let (width, height) = window_dimensions(&settings.keyboard_layout, settings.scale, &settings.cat_breed);
     Some(bottom_right(
         target_display(displays, preferred)?,
         width,

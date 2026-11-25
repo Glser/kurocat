@@ -50,7 +50,17 @@ pub fn base_dimensions(layout: &str) -> (f64, f64) {
     }
 }
 
-pub fn window_dimensions(layout: &str, scale: f64) -> (f64, f64) {
+// The photo desk extends left of the original scene: three key pitches,
+// plus the mouse shell and its travel. Keep the scene size/right anchor;
+// enlarge only the transparent native window, never the render scale.
+fn photo_left_margin(breed: &str) -> f64 {
+    #[cfg(windows)]
+    if breed == "black" && !win_needs_win7_ulw() { return 88.0; }
+    let _ = breed;
+    0.0
+}
+
+pub fn window_dimensions(layout: &str, scale: f64, breed: &str) -> (f64, f64) {
     let (bw, bh) = base_dimensions(layout);
     let s = scale.clamp(0.20, 1.50);
     #[cfg(windows)]
@@ -62,7 +72,7 @@ pub fn window_dimensions(layout: &str, scale: f64) -> (f64, f64) {
     #[cfg(not(windows))]
     let (min_w, min_h) = (MIN_WINDOW_WIDTH, MIN_WINDOW_HEIGHT);
     (
-        (bw * s).round().max(min_w),
+        ((bw + photo_left_margin(breed)) * s).round().max(min_w),
         (bh * s).round().max(min_h),
     )
 }
@@ -102,8 +112,9 @@ fn resize_window_anchored_bottom_right(
     win: &tauri::WebviewWindow,
     layout: &str,
     scale: f64,
+    breed: &str,
 ) -> Option<(i32, i32)> {
-    let (new_w, new_h) = window_dimensions(layout, scale);
+    let (new_w, new_h) = window_dimensions(layout, scale, breed);
     #[cfg(target_os = "macos")]
     if win
         .state::<AppState>()
@@ -332,12 +343,13 @@ fn update_settings(app: AppHandle, state: State<'_, AppState>, mut patch: AppSet
     patch.collar_color = config::normalize_collar_color(&patch.collar_color);
     patch.headphone_mode = config::normalize_headphone_mode(&patch.headphone_mode);
 
-    let (prev_autostart, prev_scale, prev_layout, prev_obs_hide) = {
+    let (prev_autostart, prev_scale, prev_layout, prev_margin, prev_obs_hide) = {
         let s = state.settings.lock().unwrap();
         (
             s.autostart,
             s.scale,
             s.keyboard_layout.clone(),
+            photo_left_margin(&s.cat_breed),
             s.obs_enabled && s.obs_hide_pet,
         )
     };
@@ -353,12 +365,13 @@ fn update_settings(app: AppHandle, state: State<'_, AppState>, mut patch: AppSet
         set_pet_visible(&app, !next_obs_hide);
     }
 
-    let size_changed = (patch.scale - prev_scale).abs() > 0.005 || patch.keyboard_layout != prev_layout;
+    let size_changed = (patch.scale - prev_scale).abs() > 0.005 || patch.keyboard_layout != prev_layout
+        || photo_left_margin(&patch.cat_breed) != prev_margin;
     set_pet_always_on_top(&app, patch.always_on_top);
     if let Some(win) = app.get_webview_window("main") {
         if size_changed {
             if let Some((nx, ny)) =
-                resize_window_anchored_bottom_right(&win, &patch.keyboard_layout, patch.scale)
+                resize_window_anchored_bottom_right(&win, &patch.keyboard_layout, patch.scale, &patch.cat_breed)
             {
                 patch.x = Some(nx);
                 patch.y = Some(ny);
@@ -916,9 +929,18 @@ pub fn apply_breed_and_save(app: &AppHandle, breed: &str) {
         "black".to_string()
     };
     let state = app.state::<AppState>();
+    let (layout, scale, old_margin) = {
+        let s = state.settings.lock().unwrap();
+        (s.keyboard_layout.clone(), s.scale, photo_left_margin(&s.cat_breed))
+    };
+    let pos = if old_margin != photo_left_margin(&normalized) {
+        app.get_webview_window("main").and_then(|win|
+            resize_window_anchored_bottom_right(&win, &layout, scale, &normalized))
+    } else { None };
     let updated = {
         let mut s = state.settings.lock().unwrap();
         s.cat_breed = normalized;
+        if let Some((x, y)) = pos { s.x = Some(x); s.y = Some(y); }
         save_settings(&s);
         s.clone()
     };
@@ -933,7 +955,8 @@ pub fn reload_and_emit_all(app: &AppHandle) {
         let mut s = state.settings.lock().unwrap();
         let disk_settings = load_settings();
         let sc = (s.scale - disk_settings.scale).abs() > 0.01
-            || s.keyboard_layout != disk_settings.keyboard_layout;
+            || s.keyboard_layout != disk_settings.keyboard_layout
+            || photo_left_margin(&s.cat_breed) != photo_left_margin(&disk_settings.cat_breed);
         let tc = s.always_on_top != disk_settings.always_on_top;
         #[cfg(target_os = "macos")]
         let display_changed = s.display_id != disk_settings.display_id;
@@ -971,6 +994,7 @@ pub fn reload_and_emit_all(app: &AppHandle) {
                 &win,
                 &disk_settings.keyboard_layout,
                 disk_settings.scale,
+                &disk_settings.cat_breed,
             );
         }
     }
@@ -1006,10 +1030,13 @@ fn start_storage_watcher(app: AppHandle) {
 pub fn apply_scale_and_save(app: &AppHandle, scale: f64) {
     let clamped = scale.clamp(0.20, 1.50);
     let state = app.state::<AppState>();
-    let layout = { state.settings.lock().unwrap().keyboard_layout.clone() };
+    let (layout, breed) = {
+        let s = state.settings.lock().unwrap();
+        (s.keyboard_layout.clone(), s.cat_breed.clone())
+    };
     let new_pos = app
         .get_webview_window("main")
-        .and_then(|win| resize_window_anchored_bottom_right(&win, &layout, clamped));
+        .and_then(|win| resize_window_anchored_bottom_right(&win, &layout, clamped, &breed));
     let updated = {
         let mut s = state.settings.lock().unwrap();
         s.scale = clamped;
@@ -1026,10 +1053,13 @@ pub fn apply_scale_and_save(app: &AppHandle, scale: f64) {
 pub fn apply_keyboard_layout_and_save(app: &AppHandle, layout: &str) {
     let normalized = normalize_keyboard_layout(layout);
     let state = app.state::<AppState>();
-    let cur_scale = { state.settings.lock().unwrap().scale };
+    let (cur_scale, breed) = {
+        let s = state.settings.lock().unwrap();
+        (s.scale, s.cat_breed.clone())
+    };
     let new_pos = app
         .get_webview_window("main")
-        .and_then(|win| resize_window_anchored_bottom_right(&win, &normalized, cur_scale));
+        .and_then(|win| resize_window_anchored_bottom_right(&win, &normalized, cur_scale, &breed));
     let updated = {
         let mut s = state.settings.lock().unwrap();
         s.keyboard_layout = normalized;
@@ -1614,7 +1644,7 @@ fn start_hit_test_loop(
             let rx = (cx - win_x) as f64 / w;
             let ry = (cy - win_y) as f64 / h;
             let inside = rx >= 0.0 && rx <= 1.0 && ry >= 0.0 && ry <= 1.0;
-            let (locked, always_on_top, is_108, cur_scale, layout_str) = {
+            let (locked, always_on_top, is_108, cur_scale, layout_str, photo_desk) = {
                 let s = settings.lock().unwrap();
                 (
                     s.click_through_locked,
@@ -1622,6 +1652,7 @@ fn start_hit_test_loop(
                     s.keyboard_layout == "108",
                     s.scale.clamp(0.20, 1.50),
                     s.keyboard_layout.clone(),
+                    photo_left_margin(&s.cat_breed) > 0.0,
                 )
             };
 
@@ -1724,11 +1755,14 @@ fn start_hit_test_loop(
             let pet_ry = (ry - pet_y0) / pet_h_frac;
             let inside_pet = pet_rx >= 0.0 && pet_rx <= 1.0 && pet_ry >= 0.0 && pet_ry <= 1.0;
 
-            let (over_interactive, raw_over_cat) = if inside_pet {
+            let (mut over_interactive, raw_over_cat) = if inside_pet {
                 is_over_interactive_silhouette(pet_rx, pet_ry, is_108)
             } else {
                 (false, false)
             };
+            // The mouse and leftmost keys can occupy the new left gutter.
+            if photo_desk && inside && pet_rx < 0.08 && pet_rx >= -0.16
+                && (0.65..=0.91).contains(&pet_ry) { over_interactive = true; }
             // While click-through is locked (and Alt is not held), suppress petting hover so users
             // aren't misled by squinting eyes when the cat is intentionally click-through.
             let over_cat = if effective_locked { false } else { raw_over_cat };
@@ -2130,7 +2164,7 @@ pub fn run() {
             }
 
             if let Some(win) = app.get_webview_window("main") {
-                let (win_w, win_h) = window_dimensions(&s.keyboard_layout, s.scale);
+                let (win_w, win_h) = window_dimensions(&s.keyboard_layout, s.scale, &s.cat_breed);
                 let _ = win.set_size(Size::Logical(LogicalSize::new(win_w, win_h)));
                 #[cfg(not(target_os = "macos"))]
                 let (target_x, target_y, sz) = {
