@@ -1,5 +1,6 @@
+import { PhotoKittenRig } from './photoKittenRig';
 import { drawPhotoMouse } from './mouseAppearance';
-import { photoRest, photoBurst, photoToes, drawPhotoBody, drawReachingPaw, photoMouseToe, PhotoKittenAction } from './photoKitten';
+import { photoMouseToe, PhotoKittenAction } from './photoKitten';
 import { keyboardCase, keyRows, frontLegend } from './keyboardFinish';
 import {
   PHOTO_KEYS,
@@ -288,6 +289,7 @@ export class KuroCatEngine {
 
   public setRenderScale(scale: number): void {
     this.renderScale = Math.max(0.2, Math.min(1.5, scale));
+    this.updatePhotoDeskShift();
     this.wakeRendering();
   }
 
@@ -392,7 +394,7 @@ export class KuroCatEngine {
     const drawH = this.logicalH * uniformScale;
     return {
       offsetX: this.customSkin?.id === CREAM_KITTEN.id
-        ? Math.max(cw - drawW, (18 - this.mouseBaseX) * uniformScale) : cw - drawW,
+        ? Math.max(cw - drawW, (18 - this.layoutMouseX) * uniformScale) : cw - drawW,
       offsetY: ch - drawH,
       uniformScale,
     };
@@ -473,7 +475,7 @@ export class KuroCatEngine {
     prevAnyKeyAt: number,
     now: number,
   ): boolean {
-    if (this.tailKeyMode === 'off') return false;
+    if (this.customSkin?.id === CREAM_KITTEN.id || this.tailKeyMode === 'off') return false;
     if (this.tailKeyMode === 'custom') {
       return this.tailKeyIdSet.has(spec.id);
     }
@@ -529,12 +531,12 @@ export class KuroCatEngine {
       this.catCenterX = 278;
       this.catTopY = 66;
       this.catBaseY = 292;
-      this.kbCenterX = 290;
+      this.layoutKeyboardX = 290;
       this.kbCenterY = 356;
       this.kbWidth = 398;
       this.kbHeight = 96;
       this.kbTiltRad = (2.4 * Math.PI) / 180;
-      this.mouseBaseX = isBigFish ? 54 : 46;
+      this.layoutMouseX = isBigFish ? 54 : 46;
       this.mouseBaseY = isBigFish ? 332 : 342;
     } else {
       this.logicalW = 420;
@@ -542,22 +544,34 @@ export class KuroCatEngine {
       this.catCenterX = 196;
       this.catTopY = 82;
       this.catBaseY = 308;
-      this.kbCenterX = isBigFish ? 234 : 214;
+      this.layoutKeyboardX = isBigFish ? 234 : 214;
       this.kbCenterY = 353;
       this.kbWidth = 266;
       this.kbHeight = 74;
       this.kbTiltRad = (3.4 * Math.PI) / 180;
-      this.mouseBaseX = isBigFish ? 72 : 54;
+      this.layoutMouseX = isBigFish ? 72 : 54;
       this.mouseBaseY = isBigFish ? 322 : 334;
     }
     if (this.customSkin?.id === CREAM_KITTEN.id) {
       const bodyBaseY = this.kbCenterY - this.kbHeight * 0.34;
       const deskShift = (bodyBaseY - this.catTopY) * 0.13;
-      this.kbCenterX -= (this.keyboardLayout === '108' ? 24 : 16) + deskShift;
-      this.mouseBaseX = this.kbCenterX - this.kbWidth * 0.51 - 31;
+      this.layoutKeyboardX -= (this.keyboardLayout === '108' ? 24 : 16) + deskShift;
+      this.layoutMouseX = this.layoutKeyboardX - this.kbWidth * 0.51 - 31;
       this.mouseBaseY = this.catTopY + (bodyBaseY - this.catTopY) * photoMouseToe.y / 600
         + this.photoGripOffsetY;
     }
+    this.updatePhotoDeskShift();
+  }
+
+  private updatePhotoDeskShift(): void {
+    this.photoDeskShift = 0;
+    if (this.customSkin?.id !== CREAM_KITTEN.id) return;
+    const keyPitch = (this.kbWidth - 14) / getKeyboardLayout(this.keyboardLayout).totalUnits;
+    const { offsetX, uniformScale } = this.getViewportTransform();
+    // Keep the cat's original framing; reduce only the desk travel if the
+    // mouse would otherwise be clipped by a narrow canvas.
+    const available = this.layoutMouseX + offsetX / uniformScale - 18;
+    this.photoDeskShift = Math.max(0, Math.min(3 * keyPitch, available));
   }
 
   public setCatAppearance(breedId: string, skin?: CatSkinConfig | null): void {
@@ -654,7 +668,9 @@ export class KuroCatEngine {
   private readonly catHeight = 226;
 
   // Mechanical keyboard deck below the sitting cat
-  private kbCenterX = 214;
+  private layoutKeyboardX = 214;
+  private photoDeskShift = 0;
+  private get kbCenterX(): number { return this.layoutKeyboardX - this.photoDeskShift; }
   private get photoGripOffsetY(): number { return this.keyboardOrientation === 'cat' ? 10 : -9; }
   private kbCenterY = 353;
   private kbWidth = 266;
@@ -662,7 +678,8 @@ export class KuroCatEngine {
   private kbTiltRad = (3.4 * Math.PI) / 180;
 
   // True-scale white oval mouse to the left of keyboard
-  private mouseBaseX = 54;
+  private layoutMouseX = 54;
+  private get mouseBaseX(): number { return this.layoutMouseX - this.photoDeskShift; }
   private mouseBaseY = 334;
   private mouseOffsetX = 0;
   private mouseOffsetY = 0;
@@ -776,6 +793,7 @@ export class KuroCatEngine {
   private squintAmount = 0;
   private earTwitchLeft = 0;
   private earTwitchRight = 0;
+  private readonly photoRig = new PhotoKittenRig();
   private readonly photoAction = new PhotoKittenAction();
   private recentKeyTimes: number[] = [];
   private typingEnergy = 0;
@@ -854,6 +872,7 @@ export class KuroCatEngine {
     const cssH = Math.max(1, this.embedded ? (this.canvas.clientHeight || 440) : window.innerHeight);
     this.canvas.width = Math.round(cssW * dpr);
     this.canvas.height = Math.round(cssH * dpr);
+    this.updatePhotoDeskShift();
     this.wakeRendering();
   }
 
@@ -1206,7 +1225,7 @@ export class KuroCatEngine {
       chosen.pos = { x: startPt.x, y: startPt.y };
       chosen.vel = { x: 0, y: 0 };
     }
-    const clampedTarget = this.clampToKeyboardSurface(targetPoint);
+    const clampedTarget = this.customSkin?.id === CREAM_KITTEN.id ? targetPoint : this.clampToKeyboardSurface(targetPoint);
     chosen.mode = 'poke';
     chosen.target = clampedTarget;
     chosen.pokeTime = 0;
@@ -2219,33 +2238,15 @@ export class KuroCatEngine {
     }
 
     if (this.customSkin?.id === CREAM_KITTEN.id) {
-      // Keep the portrait behind the keybed so its cropped lower edge is never exposed.
-      const head = this.spinePoint(0, breath);
-      const baseY = this.kbCenterY - this.kbHeight * 0.34;
-      const size = baseY - this.catTopY;
-      const mouseX = this.mouseBaseX + this.mouseOffsetX;
-      const mouseY = this.mouseBaseY + this.mouseOffsetY + this.deskHopY * 1.35;
-      // Seat the paw on the inner half of the mouse, towards the chest.
-      const gripOriginX = mouseX + 5 - size * photoMouseToe.x / 600;
-      // Share long key reaches between the shoulder and the foreleg. The paw's
-      // existing contact weight eases the torso back as the key is released.
-      const keyWeight = this.privacyMode || this.leftPaw.mode === 'mouse' ? 0
-        : Math.max(0, 1 - this.leftPaw.idleWeight - this.leftPaw.curlWeight);
-      const keyDistance = this.leftPaw.pos.x - (gripOriginX + size * photoToes.left.x / 600);
-      const bodyX = gripOriginX + Math.min(size * 0.36, Math.max(0, keyDistance) * 0.55) * keyWeight;
-      const height = (mouseY - this.photoGripOffsetY - head.y) * 600 / photoMouseToe.y;
-      const armed = this.photoAction.amount(performance.now()) >= 0.5 && photoBurst.naturalWidth > 0;
-      const gripping = !this.privacyMode && this.leftPaw.mode === 'mouse';
-      this.drawMiniMouse(ctx, mouseX, mouseY);
-      const drawLegs = (layer: 'shoulder' | 'forearm') => {
-        if (armed || !photoRest.naturalWidth) return;
-        this.drawPhotoContact(ctx, this.leftPaw, bodyX, head.y, size, height, layer, gripping);
-        this.drawPhotoContact(ctx, this.rightPaw, bodyX, head.y, size, height, layer);
-      };
-      drawLegs('shoulder');
-      drawPhotoBody(ctx, armed ? photoBurst : photoRest, bodyX, head.y, size, height);
-      this.drawKeyboard(ctx);
-      drawLegs('forearm');
+      this.drawMiniMouse(ctx);
+      this.photoRig.draw({
+        burst: this.photoAction.amount(performance.now()) >= 0.5,
+        asleep: this.asleep, blinking: this.isBlinking,
+        portraitAnchorX: this.layoutKeyboardX, kbCenterY: this.kbCenterY, kbWidth: this.kbWidth,
+        kbHeight: this.kbHeight, kbTiltRad: this.kbTiltRad, catTopY: this.catTopY,
+        deskHopY: this.deskHopY, kbBounce: this.kbBounce, privacyMode: this.privacyMode,
+        leftPaw: this.leftPaw, rightPaw: this.rightPaw,
+      }, ctx, breath, () => this.drawKeyboard(ctx));
     } else {
       this.drawMiniMouse(ctx);
       this.drawKeyboard(ctx);
@@ -3884,49 +3885,6 @@ export class KuroCatEngine {
     ctx.quadraticCurveTo(cp.x - sign * 11, cp.y + 8, cp.x - sign * 12, cp.y - 4);
     ctx.stroke();
 
-    ctx.restore();
-  }
-
-  private drawPhotoContact(ctx: CanvasRenderingContext2D, paw: PawState,
-    photoX: number, photoY: number, width: number, height: number, layer: 'shoulder' | 'forearm', gripping = false): void {
-    if (gripping) {
-      ctx.save();
-      ctx.translate(photoX, photoY);
-      ctx.scale(width/600, height/600);
-      drawReachingPaw(ctx, paw.side, photoMouseToe.x, photoMouseToe.y, layer);
-      ctx.restore();
-      return;
-    }
-    const toe = photoToes[paw.side];
-    const restX = photoX + width * toe.x / 600;
-    const deskY = this.kbCenterY + this.kbBounce * 1.1 + this.deskHopY;
-    // Rest on the back row, not on the desk behind the raised bezel.
-    const restY = deskY - this.kbHeight * 0.5 + 11 + (restX-this.kbCenterX)*Math.tan(this.kbTiltRad);
-    const reach = this.privacyMode ? 0 : Math.max(0, Math.min(1, 1-paw.idleWeight-paw.curlWeight));
-    const hop = deskY-this.kbCenterY;
-    let px = restX + (paw.pos.x-restX)*reach;
-    let py = restY + (paw.pos.y + hop - restY)*reach;
-    if (paw.side === 'right' && !this.privacyMode) {
-      const r = this.catTail.reach;
-      px += (this.catTail.tipX-px)*r;
-      py += (this.catTail.tipY-this.catTail.hover+hop-py)*r;
-    }
-    const lift = 3.5 * Math.sin(Math.PI*reach);
-    if (layer === 'forearm') {
-      ctx.save();
-      ctx.translate(px, py+1);
-      ctx.scale(9.5, 2.4);
-      const shadow = ctx.createRadialGradient(0,0,0,0,0,1);
-      shadow.addColorStop(0, `rgba(38,37,34,${0.30-lift*0.045})`);
-      shadow.addColorStop(1, 'rgba(38,37,34,0)');
-      ctx.fillStyle = shadow;
-      ctx.fillRect(-1,-1,2,2);
-      ctx.restore();
-    }
-    ctx.save();
-    ctx.translate(photoX, photoY);
-    ctx.scale(width/600, height/600);
-    drawReachingPaw(ctx, paw.side, (px-photoX)*600/width, (py-lift-photoY)*600/height, layer);
     ctx.restore();
   }
 
